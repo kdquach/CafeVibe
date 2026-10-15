@@ -3,10 +3,10 @@
 AI-assisted café discovery: describe what you need in natural language, review and edit the
 extracted intent, then get ranked cafés with explanations based on data the app actually has.
 
-> **Status: Phase 2 (Design system and shell).** The backend is an Express API with a health
-> endpoint. The frontend has the design tokens, base UI components, a responsive shell and a landing
-> page. The search box only collects a query: `/search` is a placeholder and shows no results.
-> Intent extraction, search, ranking and the map are planned for later phases (see the project roadmap).
+> **Status: Phase 3 (Search domain backend).** The backend has a health endpoint and a `/api/v1/search`
+> endpoint that accepts intent (query, filters) and returns ranked cafés. The frontend has the design
+> tokens, base UI components, a responsive shell and a landing page. The search box collects a query
+> but intent parsing, result display and the map are planned for later phases.
 
 ## Frontend design system (Phase 2)
 
@@ -83,6 +83,7 @@ Real `.env` files are git-ignored. Only `.env.example` files with placeholders a
 | backend  | `FRONTEND_ORIGIN`   | yes      | —                       | Allowed CORS origin (the frontend URL)   |
 | backend  | `PORT`              | no       | `4000`                  | API port                                 |
 | backend  | `NODE_ENV`          | no       | `development`           | `development`, `test` or `production`    |
+| backend  | `PLACE_PROVIDER`    | no       | `mock`                  | Place provider: `mock` (fixture data)    |
 | frontend | `VITE_API_BASE_URL` | no       | `http://localhost:4000` | Backend base URL (bundled into the build) |
 
 The backend validates its environment on startup with Zod and exits with a readable message if a
@@ -100,13 +101,21 @@ needed at this stage.
 | `npm run build`     | Production build                      |
 | `npm run format`    | Prettier (write)                      |
 
-## API (current)
+## API (Phase 3)
 
-All responses use a consistent envelope.
+All responses use a consistent envelope: success is `{ "data": T }`, errors are `{ "error": { "code": "...", "message": "..." } }`.
 
 - `GET /api/v1/health` → `200 { "data": { "status": "ok", "timestamp": "<ISO date>" } }`
-- Errors → `{ "error": { "code": "...", "message": "..." } }` (unknown routes return `404 NOT_FOUND`;
-  unexpected errors return `500 INTERNAL_ERROR` without stack traces)
+- `POST /api/v1/search` → Search cafés by intent (see [docs/api-contract.md](docs/api-contract.md) for request/response schema)
+  - `200` success with ranked results
+  - `400 INVALID_REQUEST` if the body does not match the schema
+  - `400 INVALID_JSON` if the body is malformed JSON
+  - `413 PAYLOAD_TOO_LARGE` if the body exceeds 100 KB
+  - `429 RATE_LIMITED` if the provider rate-limits
+  - `502 SERVICE_UNAVAILABLE` if the provider returns a 502
+  - `504 SERVICE_UNAVAILABLE` if the provider times out
+  - `500 INTERNAL_ERROR` for unexpected errors (stack traces never leak)
+- Unknown routes → `404 NOT_FOUND`
 
 ## CI
 

@@ -29,18 +29,22 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
-  // Malformed JSON bodies surface from express.json() as errors with a 400 status.
-  if (
-    typeof err === 'object' &&
-    err !== null &&
-    'type' in err &&
-    err.type === 'entity.parse.failed'
-  ) {
-    const body: ApiErrorBody = {
-      error: { code: 'INVALID_JSON', message: 'Request body is not valid JSON.' },
-    };
-    res.status(400).json(body);
-    return;
+  // Malformed JSON or oversized bodies surface from express.json() as errors.
+  if (typeof err === 'object' && err !== null && 'type' in err) {
+    if (err.type === 'entity.parse.failed') {
+      const body: ApiErrorBody = {
+        error: { code: 'INVALID_JSON', message: 'Request body is not valid JSON.' },
+      };
+      res.status(400).json(body);
+      return;
+    }
+    if (err.type === 'entity.too.large') {
+      const body: ApiErrorBody = {
+        error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds maximum size (100 KB).' },
+      };
+      res.status(413).json(body);
+      return;
+    }
   }
 
   console.error('Unhandled error:', err);

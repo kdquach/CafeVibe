@@ -6,6 +6,7 @@ const envSchema = z.object({
   FRONTEND_ORIGIN: z.url({
     message: 'FRONTEND_ORIGIN must be a valid URL, e.g. http://localhost:5173',
   }),
+  PLACE_PROVIDER: z.enum(['mock']).default('mock'),
 });
 
 export type Env = z.infer<typeof envSchema>;

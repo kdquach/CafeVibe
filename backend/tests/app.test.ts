@@ -5,9 +5,15 @@ import { createApp } from '../src/app.js';
 import { errorHandler } from '../src/middlewares/errorHandler.js';
 
 const ORIGIN = 'http://localhost:5173';
+const TEST_ENV = {
+  NODE_ENV: 'test' as const,
+  PORT: 4000,
+  FRONTEND_ORIGIN: ORIGIN,
+  PLACE_PROVIDER: 'mock' as const,
+};
 
 describe('GET /api/v1/health', () => {
-  const app = createApp({ FRONTEND_ORIGIN: ORIGIN });
+  const app = createApp(TEST_ENV);
 
   it('returns 200 with the success envelope', async () => {
     const res = await request(app).get('/api/v1/health');
@@ -24,7 +30,7 @@ describe('GET /api/v1/health', () => {
 });
 
 describe('unknown routes', () => {
-  const app = createApp({ FRONTEND_ORIGIN: ORIGIN });
+  const app = createApp(TEST_ENV);
 
   it('returns 404 with the error envelope', async () => {
     const res = await request(app).get('/api/v1/does-not-exist');
@@ -36,7 +42,7 @@ describe('unknown routes', () => {
 });
 
 describe('CORS', () => {
-  const app = createApp({ FRONTEND_ORIGIN: ORIGIN });
+  const app = createApp(TEST_ENV);
 
   it('allows the configured frontend origin', async () => {
     const res = await request(app).get('/api/v1/health').set('Origin', ORIGIN);
@@ -72,7 +78,7 @@ describe('error handling', () => {
   });
 
   it('returns 400 for malformed JSON bodies', async () => {
-    const app = createApp({ FRONTEND_ORIGIN: ORIGIN });
+    const app = createApp(TEST_ENV);
     const res = await request(app)
       .post('/api/v1/health')
       .set('Content-Type', 'application/json')
