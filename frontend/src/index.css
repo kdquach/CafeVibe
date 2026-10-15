@@ -1,0 +1,105 @@
+@import 'tailwindcss';
+/* Inter Variable ships latin, latin-ext and vietnamese subsets (loaded on demand via unicode-range). */
+@import '@fontsource-variable/inter';
+
+/*
+ * CafeVibe design tokens — source of truth: design-system-v1.md.
+ * Everything visual flows from this block, so a future Figma redesign only needs to change tokens here.
+ *
+ * Deviations from design-system-v1.md (all measured, see src/test/tokens.test.ts):
+ *  - border-strong, brand-550: new tokens. The documented `border` (#E5DED5) is 1.25:1 on `bg`, too faint
+ *    for form-control boundaries (needs 3:1); white-on-brand-500 is only 3.09:1, so primary buttons use
+ *    dark text, and their hover state uses brand-550 (dark text 4.55:1) instead of brand-600 (~4.1:1).
+ *  - font-heading uses Inter, not DM Sans: DM Sans lacks 90 of 134 Vietnamese letters (ơ, ư, ạ, ế, ộ…).
+ *    Change --font-heading here to switch (e.g. to a font with a Vietnamese subset).
+ */
+@theme {
+  /* Typography */
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-heading:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Type scale. Display / H1 / H2 shrink on small screens via clamp(). */
+  --text-display: clamp(2.5rem, 1.6rem + 3.6vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-h1: clamp(2rem, 1.4rem + 2.4vw, 2.75rem);
+  --text-h1--line-height: 1.1;
+  --text-h2: clamp(1.625rem, 1.2rem + 1.6vw, 2.125rem);
+  --text-h2--line-height: 1.15;
+  --text-h3: 1.5rem;
+  --text-h3--line-height: 1.25;
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.3;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.55;
+
+  /* Colors */
+  --color-brand-50: #fff4ef;
+  --color-brand-100: #ffe4d8;
+  --color-brand-500: #e76f51;
+  --color-brand-550: #e06648;
+  --color-brand-600: #d95d40;
+  --color-brand-700: #b94b34;
+  --color-bg: #faf7f2;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2eee8;
+  --color-text: #252422;
+  --color-text-muted: #706c66;
+  --color-border: #e5ded5;
+  --color-border-strong: #8a847c;
+  --color-accent-green: #5f7d63;
+  --color-success: #2f7d52;
+  --color-warning: #a96512;
+  --color-danger: #b93832;
+  --color-info: #326a9a;
+
+  /* Radius: 8 / 12 / 16 / images 20 / search surface 24 */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-image: 1.25rem;
+  --radius-search: 1.5rem;
+
+  /* Restrained elevation: prefer border/surface contrast over heavy shadows */
+  --shadow-card: 0 1px 2px rgb(37 36 34 / 0.06);
+  --shadow-raised: 0 4px 16px rgb(37 36 34 / 0.08);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+  }
+
+  /* One visible, high-contrast focus indicator for every interactive element (brand-700: 4.77:1 on bg). */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-700);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
