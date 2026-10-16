@@ -30,6 +30,11 @@ KHÔNG làm: xếp hạng, map, favorites, auth, database.
 - Sau adapter IntentExtractor, có validation và fallback về mock.
 - Cần quyết định trước: nhà cung cấp/model, nơi giữ khóa API (chỉ ở backend, không bao giờ trong VITE_*).
 
+## Việc tồn đọng trước 4c
+- (a) `evaluateConstraints` cần so sánh theo VND: nếu quán có giá VND thì so sánh trực tiếp với `budget.maxVnd`; nếu quán chỉ có `priceLevel` thì kết quả là `unknown`, không tự map VND sang priceLevel.
+- (b) `/search` hiện tự suy intent từ query thay vì nhận intent đã xác nhận; quyết định nối luồng ở 4c.
+- (c) Kiểm tra `LOCATION_NOT_SUPPORTED` có trong code Phase 3 (plan yêu cầu nhưng code hiện chưa thấy).
+
 ## Quy tắc xuyên suốt
 - Không bịa dữ liệu quán hay thông tin AI chưa xác minh.
 - Mỗi phiên làm một lát cắt, trình bày kế hoạch và chờ duyệt trước khi code.

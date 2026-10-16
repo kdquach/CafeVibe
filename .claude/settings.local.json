@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm test *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npm --prefix backend run lint)",
+      "Bash(npm --prefix backend run typecheck)",
+      "Bash(npm --prefix backend test --silent)",
+      "Bash(npm --prefix backend test -- --reporter=verbose src/routes/intent.test.ts)"
     ]
   }
 }

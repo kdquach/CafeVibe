@@ -53,6 +53,46 @@ Health check endpoint to verify the server is running.
 
 ---
 
+### POST /search/intent
+
+Extract search intent from a natural-language query (mock, rule-based in Phase 4a).
+
+**Request Body:**
+```json
+{
+  "query": "string (required, min 1 char, max 500 chars)"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "data": {
+    "query": "Quán yên tĩnh để làm việc ở Gò Vấp, dưới 70.000đ",
+    "districts": [{ "name": "Gò Vấp", "strength": "required" }],
+    "budget": { "maxVnd": 70000, "strength": "required" },
+    "amenities": [
+      { "name": "quiet", "strength": "preferred" },
+      { "name": "work-friendly", "strength": "preferred" }
+    ]
+  }
+}
+```
+
+Response matches `SearchIntentSchema` (fields not detected are omitted, never fabricated).
+
+**Status Codes:**
+
+| Code | Error Code | Meaning |
+|------|-----------|---------|
+| 200 | — | Success, intent extracted |
+| 400 | INVALID_REQUEST | Request body validation failed |
+| 400 | INVALID_JSON | Request body is not valid JSON |
+| 413 | PAYLOAD_TOO_LARGE | Request body exceeds 100KB limit |
+| 502 | INTENT_EXTRACTION_FAILED | Extractor error or invalid output |
+
+---
+
 ### POST /search
 
 Search for cafes based on criteria.

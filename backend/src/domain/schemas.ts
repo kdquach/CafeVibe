@@ -49,6 +49,10 @@ export const SearchIntentSchema = z.object({
     max: z.number(),
     strength: ConstraintStrengthSchema,
   }).optional(),
+  budget: z.object({
+    maxVnd: z.number().int().positive(),
+    strength: ConstraintStrengthSchema,
+  }).optional(),
   amenities: z.array(z.object({
     name: z.string().min(1),
     strength: ConstraintStrengthSchema,
