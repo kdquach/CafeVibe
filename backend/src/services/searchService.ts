@@ -1,6 +1,6 @@
 import type { PlaceProvider } from '../domain/providers.js';
 import type { SearchIntent, SearchResult } from '../domain/schemas.js';
-import { evaluateConstraints, calculateStrength } from '../domain/utils.js';
+import { evaluateConstraints } from '../domain/utils.js';
 
 export interface SearchServiceDeps {
   placeProvider: PlaceProvider;
@@ -13,28 +13,31 @@ export class SearchService {
   async search(intent: SearchIntent): Promise<SearchResult[]> {
     const places = await this.deps.placeProvider.getPlaces();
 
-    const matched = places.filter((place) => evaluateConstraints(intent, place));
+    const results: SearchResult[] = [];
 
-    const withStrength = matched.map((place) => ({
-      place,
-      strength: calculateStrength(intent, place, this.deps.clock),
-    }));
+    for (const place of places) {
+      const { constraints, hasUnmetRequired } = evaluateConstraints(intent, place);
 
-    const sorted = withStrength.sort((a, b) => {
-      if (a.strength !== b.strength) {
-        return b.strength - a.strength;
+      results.push({
+        id: place.id,
+        name: place.name,
+        district: place.district,
+        address: place.address,
+        priceLevel: place.priceLevel,
+        constraints,
+        hasUnmetRequired,
+      });
+    }
+
+    // Sort: places without unmet required first, then by count of 'met' constraints
+    return results.sort((a, b) => {
+      if (a.hasUnmetRequired !== b.hasUnmetRequired) {
+        return a.hasUnmetRequired ? 1 : -1;
       }
-      return a.place.name.localeCompare(b.place.name);
+      const aMetCount = a.constraints.filter((c) => c.status === 'met').length;
+      const bMetCount = b.constraints.filter((c) => c.status === 'met').length;
+      return bMetCount - aMetCount;
     });
-
-    return sorted.map(({ place, strength }) => ({
-      id: place.id,
-      name: place.name,
-      district: place.district,
-      address: place.address,
-      priceLevel: place.priceLevel,
-      strength,
-    }));
   }
 }
 

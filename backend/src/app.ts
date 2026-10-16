@@ -4,6 +4,7 @@ import type { Env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { MockPlaceProvider } from './domain/providers.js';
 import { createSearchService } from './services/searchService.js';
+import { SimpleIntentBuilder } from './services/intentBuilder.js';
 import { createApiRouter } from './routes/index.js';
 
 export interface AppDependencies {
@@ -19,12 +20,13 @@ export function createApp(env: Env, deps: AppDependencies = {}): Express {
   const clock = deps.clock || (() => new Date());
   const placeProvider = new MockPlaceProvider();
   const searchService = createSearchService(placeProvider, clock);
+  const intentBuilder = new SimpleIntentBuilder();
 
   app.disable('x-powered-by');
   app.use(cors({ origin: env.FRONTEND_ORIGIN }));
   app.use(express.json({ limit: '100kb' }));
 
-  app.use('/api/v1', createApiRouter(searchService));
+  app.use('/api/v1', createApiRouter(searchService, intentBuilder));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

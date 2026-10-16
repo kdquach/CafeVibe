@@ -60,24 +60,21 @@ Search for cafes based on criteria.
 **Request Body:**
 ```json
 {
-  "query": "string (required, min 1 char)",
-  "districts": ["string"],
-  "priceRange": [number, number],
-  "amenities": ["string"],
-  "openNow": "boolean",
-  "minRating": "number (0-5)"
+  "query": "string (required, min 1 char)"
 }
 ```
+
+The `query` field is parsed server-side to extract search intent. The SimpleIntentBuilder supports:
+- District keywords: "d1", "district 1", "q1", etc.
+- Price: "cheap", "budget", "mid", "expensive", "premium", "luxury"
+- Amenities: "wifi", "parking", "work", "office"
+- Open now: "open now", "currently open"
+- Rating: "highly rated", "top rated", "well rated", "good rating"
 
 **Request Example:**
 ```json
 {
-  "query": "quiet coffee",
-  "districts": ["District 1", "District 3"],
-  "priceRange": [1, 3],
-  "amenities": ["wifi", "parking"],
-  "openNow": true,
-  "minRating": 4.0
+  "query": "wifi d1 budget open now"
 }
 ```
 
@@ -87,11 +84,17 @@ Search for cafes based on criteria.
   "data": [
     {
       "id": "cafe-001",
-      "name": "Highlands Coffee District 1",
+      "name": "[MOCK] Modern Cafe D1",
       "district": "District 1",
-      "address": "45 Nguyễn Hữu Cảnh, District 1",
+      "address": "[MOCK] 45 Street D1",
       "priceLevel": 2,
-      "strength": 85
+      "constraints": [
+        { "name": "location", "status": "met" },
+        { "name": "budget", "status": "met" },
+        { "name": "amenities", "status": "met" },
+        { "name": "openNow", "status": "unknown" }
+      ],
+      "hasUnmetRequired": false
     }
   ]
 }
@@ -102,8 +105,11 @@ Search for cafes based on criteria.
 - `name`: Cafe name
 - `district`: District name
 - `address`: Physical address
-- `priceLevel`: Price level 1-4 (1=budget, 4=luxury)
-- `strength`: Match strength 0-100 (higher=better match)
+- `priceLevel`: Price level 1-4 (1=budget, 4=luxury), or null if unknown
+- `constraints`: Array of evaluated search constraints, each with:
+  - `name`: Constraint identifier (location, budget, amenities, openNow, rating)
+  - `status`: Evaluation result—`met` (satisfied), `not_met` (failed), or `unknown` (insufficient data)
+- `hasUnmetRequired`: Boolean flag—true if any required constraint has status `not_met` or `unknown`
 
 **Status Codes:**
 
