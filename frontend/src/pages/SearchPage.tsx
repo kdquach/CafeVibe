@@ -1,10 +1,13 @@
 import { SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { IntentConfirmPanel } from '@/components/intent/IntentConfirmPanel';
+import { SAMPLE_INTENT } from '@/components/intent/sampleIntent';
 import { Container } from '@/components/layout/container';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SearchBox } from '@/components/ui/search-box';
+import type { IntentStatus } from '@/features/intent/types';
 import { usePageTitle } from '@/lib/use-page-title';
 
 /**
@@ -16,6 +19,30 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const submitted = params.get('q')?.trim() ?? '';
   const [value, setValue] = useState(submitted);
+
+  // Preview dev-only: ?preview=ready|loading|error|empty. Bản thường giữ placeholder.
+  const preview = params.get('preview');
+  const isDevPreview =
+    import.meta.env.DEV &&
+    (preview === 'ready' || preview === 'loading' || preview === 'error' || preview === 'empty');
+
+  if (isDevPreview) {
+    const status = preview as IntentStatus;
+    return (
+      <Container className="py-12 lg:py-16">
+        <h1 className="text-h1 font-bold">Tìm kiếm</h1>
+        <p className="mt-2 text-sm text-text-muted">Dữ liệu mẫu (chưa nối API).</p>
+        <div className="mt-6 max-w-3xl">
+          <IntentConfirmPanel
+            status={status}
+            initialIntent={SAMPLE_INTENT}
+            onConfirm={() => undefined}
+            onRetry={() => undefined}
+          />
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container className="py-12 lg:py-16">
