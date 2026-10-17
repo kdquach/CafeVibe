@@ -1,14 +1,18 @@
-import type { Place } from './schemas.js';
+import type { Place, ResultSource } from './schemas.js';
 import { PlaceProviderError, RateLimitError, TimeoutError } from './errors.js';
 import { CAFES } from './fixtures.js';
 
 export interface PlaceProvider {
+  readonly source: ResultSource;
   getPlaces(): Promise<Place[]>;
 }
 
 export class MockPlaceProvider implements PlaceProvider {
+  readonly source: ResultSource = 'mock';
   private requestCount = 0;
   private simulateError: 'timeout' | 'provider' | 'ratelimit' | null = null;
+
+  constructor(private places: Place[] = CAFES) {}
 
   setSimulateError(error: 'timeout' | 'provider' | 'ratelimit' | null) {
     this.simulateError = error;
@@ -29,7 +33,7 @@ export class MockPlaceProvider implements PlaceProvider {
       throw new RateLimitError('Mock provider rate limit exceeded');
     }
 
-    return CAFES;
+    return this.places;
   }
 
   getRequestCount(): number {

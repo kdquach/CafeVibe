@@ -95,61 +95,68 @@ Response matches `SearchIntentSchema` (fields not detected are omitted, never fa
 
 ### POST /search
 
-Search for cafes based on criteria.
+Search for cafes using a confirmed intent object.
 
 **Request Body:**
 ```json
 {
-  "query": "string (required, min 1 char)"
+  "intent": {
+    "query": "string (required, min 1 char)",
+    "districts": [{ "name": "District 1", "strength": "required" }],
+    "budget": { "maxVnd": 70000, "strength": "required" }
+  }
 }
 ```
 
-The `query` field is parsed server-side to extract search intent. The SimpleIntentBuilder supports:
-- District keywords: "d1", "district 1", "q1", etc.
-- Price: "cheap", "budget", "mid", "expensive", "premium", "luxury"
-- Amenities: "wifi", "parking", "work", "office"
-- Open now: "open now", "currently open"
-- Rating: "highly rated", "top rated", "well rated", "good rating"
+The `intent` object matches `SearchIntentSchema`. A legacy body with only `{ "query" }` returns 400 INVALID_REQUEST.
 
 **Request Example:**
 ```json
 {
-  "query": "wifi d1 budget open now"
+  "intent": {
+    "query": "quiet cafe in District 1 under 70000",
+    "districts": [{ "name": "District 1", "strength": "required" }],
+    "budget": { "maxVnd": 70000, "strength": "required" },
+    "amenities": [{ "name": "quiet", "strength": "preferred" }]
+  }
 }
 ```
 
 **Response (Success):**
 ```json
 {
-  "data": [
-    {
-      "id": "cafe-001",
-      "name": "[MOCK] Modern Cafe D1",
-      "district": "District 1",
-      "address": "[MOCK] 45 Street D1",
-      "priceLevel": 2,
-      "constraints": [
-        { "name": "location", "status": "met" },
-        { "name": "budget", "status": "met" },
-        { "name": "amenities", "status": "met" },
-        { "name": "openNow", "status": "unknown" }
-      ],
-      "hasUnmetRequired": false
-    }
-  ]
+  "data": {
+    "results": [
+      {
+        "id": "cafe-001",
+        "name": "[MOCK] Modern Cafe D1",
+        "district": "District 1",
+        "address": "[MOCK] 45 Street D1",
+        "priceLevel": 2,
+        "source": "mock",
+        "constraints": [
+          { "name": "location", "status": "met" },
+          { "name": "budget", "status": "met" },
+          { "name": "amenities", "status": "met" },
+          { "name": "openNow", "status": "unknown" }
+        ],
+        "hasUnmetRequired": false
+      }
+    ],
+    "warnings": []
+  }
 }
 ```
 
 **Response Fields:**
-- `id`: Unique cafe identifier
-- `name`: Cafe name
-- `district`: District name
-- `address`: Physical address
-- `priceLevel`: Price level 1-4 (1=budget, 4=luxury), or null if unknown
-- `constraints`: Array of evaluated search constraints, each with:
+- `results`: Array of matched cafes in provider order (no ranking or sorting in this phase)
+- `results[].source`: Data source — `mock` for fixture data, `provider` for a real provider
+- `results[].constraints`: Array of evaluated search constraints, each with:
   - `name`: Constraint identifier (location, budget, amenities, openNow, rating)
   - `status`: Evaluation result—`met` (satisfied), `not_met` (failed), or `unknown` (insufficient data)
-- `hasUnmetRequired`: Boolean flag—true if any required constraint has status `not_met` or `unknown`
+- `results[].hasUnmetRequired`: Boolean flag—true if any required constraint has status `not_met` or `unknown`
+- `results`: A place is excluded when a required constraint evaluates to `not_met`; required + `unknown` keeps the place with the flag set. Preferred constraints never exclude.
+- `warnings`: Array of `{ code, message }` objects. Unsupported districts return 200 with empty `results` and a `LOCATION_NOT_SUPPORTED` warning. Budget is compared in VND only (`minPriceVnd <= budget.maxVnd`); a place with only `priceLevel` evaluates to `unknown`, never mapped from price level. A missing amenity tag evaluates to `unknown`, never `not_met` (absence of a tag is not evidence of absence).
 
 **Status Codes:**
 
@@ -200,18 +207,9 @@ The `query` field is parsed server-side to extract search intent. The SimpleInte
 
 The API is configured to accept requests from the frontend origin specified in the `FRONTEND_ORIGIN` environment variable.
 
-## Search Algorithm
+## Result Ordering
 
-Results are ranked by "strength"—a score 0-100 combining:
-
-- **Base score:** 50
-- **District match:** +15
-- **Price proximity:** +10 (adjusted by distance from mid-range)
-- **Amenities:** +5 per matched amenity
-- **Rating match:** +10 (adjusted by proximity to minRating)
-- **Open now:** +20 (if openNow=true and cafe is currently open)
-
-Maximum strength is capped at 100. Results with equal strength are sorted alphabetically by name.
+Results are returned in provider order. Ranking, scoring, filters, and sorting are Phase 5 scope.
 
 **Timezone:** UTC+7 is used for all opening hours calculations.
 

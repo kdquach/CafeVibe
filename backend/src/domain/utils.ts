@@ -16,20 +16,34 @@ export function isOpenNow(place: Place, clock: () => Date): boolean | null {
   return currentHour >= place.openHour && currentHour < place.closeHour;
 }
 
-export function evaluateConstraints(intent: SearchIntent, place: Place): { constraints: Constraint[]; hasUnmetRequired: boolean } {
+export function evaluateConstraints(intent: SearchIntent, place: Place): { constraints: Constraint[]; hasUnmetRequired: boolean; excluded: boolean } {
   const constraints: Constraint[] = [];
   let hasUnmetRequired = false;
+  let excluded = false;
 
   // District constraint
   if (intent.districts && intent.districts.length > 0) {
     const districtMatch = intent.districts.find(d => d.name === place.district);
     const status = districtMatch ? 'met' : 'not_met';
     constraints.push({ name: 'location', status });
-    if (status === 'not_met') {
-      const hasRequired = intent.districts.some(d => d.strength === 'required');
-      if (hasRequired) {
-        hasUnmetRequired = true;
-      }
+    if (status === 'not_met' && intent.districts.some(d => d.strength === 'required')) {
+      hasUnmetRequired = true;
+      excluded = true;
+    }
+  }
+
+  // Budget constraint (VND only; never map VND to priceLevel).
+  if (intent.budget) {
+    let status: 'met' | 'not_met' | 'unknown';
+    if (place.minPriceVnd === null) {
+      status = 'unknown';
+    } else {
+      status = place.minPriceVnd <= intent.budget.maxVnd ? 'met' : 'not_met';
+    }
+    constraints.push({ name: 'budget', status });
+    if (status !== 'met' && intent.budget.strength === 'required') {
+      hasUnmetRequired = true;
+      if (status === 'not_met') excluded = true;
     }
   }
 
@@ -38,45 +52,33 @@ export function evaluateConstraints(intent: SearchIntent, place: Place): { const
     let status: 'met' | 'not_met' | 'unknown';
     if (place.priceLevel === null) {
       status = 'unknown';
-      if (intent.priceRange.strength === 'required') {
-        hasUnmetRequired = true;
-      }
     } else {
       const { min, max } = intent.priceRange;
       status = place.priceLevel >= min && place.priceLevel <= max ? 'met' : 'not_met';
-      if (status === 'not_met' && intent.priceRange.strength === 'required') {
-        hasUnmetRequired = true;
-      }
     }
     constraints.push({ name: 'budget', status });
+    if (status !== 'met' && intent.priceRange.strength === 'required') {
+      hasUnmetRequired = true;
+      if (status === 'not_met') excluded = true;
+    }
   }
 
-  // Amenities constraint
+  // Amenities constraint: a missing tag is not evidence of absence, so never not_met.
   if (intent.amenities && intent.amenities.length > 0) {
     const hasAmenity = intent.amenities.some(a => place.amenities.includes(a.name));
-    const status = hasAmenity ? 'met' : 'not_met';
+    const status = hasAmenity ? 'met' : 'unknown';
     constraints.push({ name: 'amenities', status });
-    if (status === 'not_met' && intent.amenities.some(a => a.strength === 'required')) {
+    if (status === 'unknown' && intent.amenities.some(a => a.strength === 'required')) {
       hasUnmetRequired = true;
     }
   }
 
-  // Open now constraint
+  // Open now constraint: isOpenNow not wired yet (Phase 5), always unknown.
   if (intent.openNow) {
-    const openStatus = isOpenNow(place, () => new Date());
-    let status: 'met' | 'not_met' | 'unknown';
-    if (openStatus === null) {
-      status = 'unknown';
-      if (intent.openNow.strength === 'required') {
-        hasUnmetRequired = true;
-      }
-    } else {
-      status = openStatus ? 'met' : 'not_met';
-      if (status === 'not_met' && intent.openNow.strength === 'required') {
-        hasUnmetRequired = true;
-      }
+    constraints.push({ name: 'openNow', status: 'unknown' });
+    if (intent.openNow.strength === 'required') {
+      hasUnmetRequired = true;
     }
-    constraints.push({ name: 'openNow', status });
   }
 
   // Rating constraint
@@ -85,9 +87,10 @@ export function evaluateConstraints(intent: SearchIntent, place: Place): { const
     constraints.push({ name: 'rating', status });
     if (status === 'not_met' && intent.minRating.strength === 'required') {
       hasUnmetRequired = true;
+      excluded = true;
     }
   }
 
-  return { constraints, hasUnmetRequired };
+  return { constraints, hasUnmetRequired, excluded };
 }
 

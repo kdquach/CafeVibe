@@ -30,6 +30,7 @@ export const PlaceSchema = z.object({
   rating: z.number().min(0).max(5),
   tags: z.array(z.string()),
   priceLevel: z.union([z.number().int().min(1).max(4), z.null()]),
+  minPriceVnd: z.union([z.number().int().positive(), z.null()]),
   amenities: z.array(z.string()),
 });
 
@@ -69,14 +70,30 @@ export const SearchIntentSchema = z.object({
 
 export type SearchIntent = z.infer<typeof SearchIntentSchema>;
 
+export const ResultSourceSchema = z.enum(['mock', 'provider']);
+export type ResultSource = z.infer<typeof ResultSourceSchema>;
+
 export const SearchResultSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   district: z.string().min(1),
   address: z.string().min(1),
   priceLevel: z.union([z.number().int().min(1).max(4), z.null()]),
+  source: ResultSourceSchema,
   constraints: z.array(ConstraintSchema),
   hasUnmetRequired: z.boolean(),
 });
 
 export type SearchResult = z.infer<typeof SearchResultSchema>;
+
+export const SearchWarningSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+});
+export type SearchWarning = z.infer<typeof SearchWarningSchema>;
+
+export const SearchResponseSchema = z.object({
+  results: z.array(SearchResultSchema),
+  warnings: z.array(SearchWarningSchema),
+});
+export type SearchResponse = z.infer<typeof SearchResponseSchema>;

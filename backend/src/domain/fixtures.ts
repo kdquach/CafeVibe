@@ -16,6 +16,7 @@ export const CAFES: Place[] = [
     rating: 4.5,
     tags: ['modern', 'wifi'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['wifi', 'parking', 'work-friendly'],
   },
   {
@@ -30,6 +31,7 @@ export const CAFES: Place[] = [
     rating: 4.2,
     tags: ['budget'],
     priceLevel: 1,
+    minPriceVnd: 40000,
     amenities: ['outdoor-seating'],
   },
   {
@@ -44,6 +46,7 @@ export const CAFES: Place[] = [
     rating: 4.7,
     tags: ['cozy', 'vintage', 'artisan'],
     priceLevel: 3,
+    minPriceVnd: 85000,
     amenities: ['vintage-decor', 'artisan-coffee', 'cozy'],
   },
   {
@@ -58,6 +61,7 @@ export const CAFES: Place[] = [
     rating: 4.6,
     tags: ['specialty', 'modern', 'wifi'],
     priceLevel: 3,
+    minPriceVnd: 85000,
     amenities: ['wifi', 'specialty-coffee', 'modern'],
   },
   {
@@ -72,6 +76,7 @@ export const CAFES: Place[] = [
     rating: 4.1,
     tags: ['vietnamese', 'budget', 'classic'],
     priceLevel: 1,
+    minPriceVnd: 40000,
     amenities: ['budget-friendly', 'local'],
   },
   {
@@ -86,6 +91,7 @@ export const CAFES: Place[] = [
     rating: 4.3,
     tags: ['vietnamese', 'trendy', 'instagrammable'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['instagrammable', 'trendy', 'outdoor-seating'],
   },
   {
@@ -100,6 +106,7 @@ export const CAFES: Place[] = [
     rating: 4.4,
     tags: ['vietnamese', 'modern', 'chain'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['chain', 'modern', 'wifi'],
   },
   {
@@ -114,6 +121,7 @@ export const CAFES: Place[] = [
     rating: 4.8,
     tags: ['cozy', 'artisan', 'local'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['cozy', 'artisan-coffee', 'local-vibe'],
   },
   {
@@ -128,6 +136,7 @@ export const CAFES: Place[] = [
     rating: 4.0,
     tags: ['vietnamese', 'budget', 'vintage'],
     priceLevel: 1,
+    minPriceVnd: 40000,
     amenities: ['budget-friendly', 'vintage-decor'],
   },
   {
@@ -142,6 +151,7 @@ export const CAFES: Place[] = [
     rating: 4.5,
     tags: ['modern', 'chain', 'wifi'],
     priceLevel: 3,
+    minPriceVnd: 85000,
     amenities: ['chain', 'wifi', 'modern', 'parking'],
   },
   {
@@ -156,6 +166,7 @@ export const CAFES: Place[] = [
     rating: 4.2,
     tags: ['vietnamese', 'modern', 'cozy'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['cozy', 'modern', 'local'],
   },
   {
@@ -170,6 +181,7 @@ export const CAFES: Place[] = [
     rating: 4.9,
     tags: ['specialty', 'artisan', 'premium'],
     priceLevel: 4,
+    minPriceVnd: 120000,
     amenities: ['premium', 'specialty-coffee', 'artisan-coffee'],
   },
   {
@@ -184,6 +196,7 @@ export const CAFES: Place[] = [
     rating: 4.6,
     tags: ['premium', 'modern', 'chain'],
     priceLevel: 4,
+    minPriceVnd: 120000,
     amenities: ['premium', 'chain', 'modern'],
   },
   {
@@ -198,6 +211,7 @@ export const CAFES: Place[] = [
     rating: 4.3,
     tags: ['vietnamese', 'chain', 'wifi'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['chain', 'wifi', 'modern'],
   },
   {
@@ -211,10 +225,29 @@ export const CAFES: Place[] = [
     closeHour: 20,
     rating: 3.9,
     tags: ['vietnamese', 'budget', 'quiet'],
-    priceLevel: 1,
+    priceLevel: null,
+    minPriceVnd: null,
     amenities: ['budget-friendly', 'quiet', 'local-vibe'],
   },
-  // Test fixtures with unknown data
+  {
+    id: 'cafe-016',
+    name: '[MOCK] Late Night D5',
+    address: '[MOCK] 90 Street D5',
+    latitude: 10.771,
+    longitude: 106.668,
+    district: 'District 5',
+    openHour: null,
+    closeHour: null,
+    rating: 3.8,
+    tags: ['late-night'],
+    priceLevel: 2,
+    minPriceVnd: null,
+    amenities: ['parking'],
+  },
+];
+
+// Test-only fixtures with unknown data. Injected via `new MockPlaceProvider(places)`.
+export const TEST_CAFES_UNKNOWN_PRICE: Place[] = [
   {
     id: 'cafe-test-unknown-price',
     name: '[MOCK TEST] Unknown Price D1',
@@ -227,6 +260,7 @@ export const CAFES: Place[] = [
     rating: 4.0,
     tags: ['test'],
     priceLevel: null,
+    minPriceVnd: null,
     amenities: ['wifi'],
   },
   {
@@ -241,6 +275,7 @@ export const CAFES: Place[] = [
     rating: 3.8,
     tags: ['test'],
     priceLevel: 2,
+    minPriceVnd: 60000,
     amenities: ['parking'],
   },
 ];

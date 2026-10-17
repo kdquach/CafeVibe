@@ -35,6 +35,10 @@ KHÔNG làm: xếp hạng, map, favorites, auth, database.
 - (b) `/search` hiện tự suy intent từ query thay vì nhận intent đã xác nhận; quyết định nối luồng ở 4c.
 - (c) Kiểm tra `LOCATION_NOT_SUPPORTED` có trong code Phase 3 (plan yêu cầu nhưng code hiện chưa thấy).
 
+## Việc tồn đọng đầu Phase 5 (sau 4c-1)
+- (d) Bọc `Attribute<T>` đầy đủ (known/unknown + source provider | user_submitted | inferred) cho mọi thuộc tính quán; thiếu thẻ tiện ích không phải bằng chứng vắng mặt nên amenities thiếu luôn là `unknown` (ADR-002 mục 6).
+- (e) Nối `isOpenNow` vào `evaluateConstraints` (inject clock, múi giờ Asia/Ho_Chi_Minh); ở 4c-1 điều kiện `openNow` luôn trả `unknown`.
+
 ## Quy tắc xuyên suốt
 - Không bịa dữ liệu quán hay thông tin AI chưa xác minh.
 - Mỗi phiên làm một lát cắt, trình bày kế hoạch và chờ duyệt trước khi code.

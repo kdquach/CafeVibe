@@ -1,28 +1,21 @@
-import { z } from 'zod';
 import type { RequestHandler } from 'express';
 import type { SearchService } from '../services/searchService.js';
-import type { IntentBuilder } from '../services/intentBuilder.js';
+import { SearchIntentSchema } from '../domain/schemas.js';
 import { HttpError } from '../middlewares/errorHandler.js';
 import { PlaceProviderError, RateLimitError, TimeoutError } from '../domain/errors.js';
 
-const QueryRequestSchema = z.object({
-  query: z.string().min(1),
-});
+const SearchRequestSchema = SearchIntentSchema;
 
-export function createSearchHandler(
-  searchService: SearchService,
-  intentBuilder: IntentBuilder,
-): RequestHandler {
+export function createSearchHandler(searchService: SearchService): RequestHandler {
   return async (req, res, next) => {
     try {
-      const parsed = QueryRequestSchema.safeParse(req.body);
+      const parsed = SearchRequestSchema.safeParse(req.body?.intent);
       if (!parsed.success) {
-        throw new HttpError(400, 'INVALID_REQUEST', 'Request must include a query string.');
+        throw new HttpError(400, 'INVALID_REQUEST', 'Request must include a valid intent object.');
       }
 
-      const intent = await intentBuilder.fromQuery(parsed.data.query);
-      const results = await searchService.search(intent);
-      res.json({ data: results });
+      const response = await searchService.search(parsed.data);
+      res.json({ data: response });
     } catch (err) {
       if (err instanceof HttpError) {
         next(err);

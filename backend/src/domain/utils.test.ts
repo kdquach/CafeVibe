@@ -2,6 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { isOpenNow, evaluateConstraints } from './utils.js';
 import type { Place, SearchIntent } from './schemas.js';
 
+const basePlace: Place = {
+  id: 'cafe-1',
+  name: 'Test Cafe',
+  address: 'Test Address',
+  latitude: 10.8,
+  longitude: 106.7,
+  district: 'District 1',
+  openHour: 7,
+  closeHour: 22,
+  rating: 4.5,
+  tags: [],
+  priceLevel: 2,
+  minPriceVnd: 60000,
+  amenities: ['wifi', 'parking'],
+};
+
 describe('isOpenNow', () => {
   const mockClock = (hour: number) => {
     const date = new Date('2026-10-17T00:00:00Z');
@@ -10,138 +26,86 @@ describe('isOpenNow', () => {
   };
 
   it('returns true when cafe is currently open', () => {
-    const place: Place = {
-      id: 'cafe-1',
-      name: 'Test Cafe',
-      address: 'Test Address',
-      latitude: 10.8,
-      longitude: 106.7,
-      district: 'District 1',
-      openHour: 7,
-      closeHour: 22,
-      rating: 4.5,
-      tags: [],
-      priceLevel: 2,
-      amenities: [],
-    };
-    const result = isOpenNow(place, () => mockClock(10));
-    expect(result).toBe(true);
+    expect(isOpenNow(basePlace, () => mockClock(10))).toBe(true);
   });
 
   it('returns false when cafe is closed', () => {
-    const place: Place = {
-      id: 'cafe-1',
-      name: 'Test Cafe',
-      address: 'Test Address',
-      latitude: 10.8,
-      longitude: 106.7,
-      district: 'District 1',
-      openHour: 7,
-      closeHour: 22,
-      rating: 4.5,
-      tags: [],
-      priceLevel: 2,
-      amenities: [],
-    };
-    const result = isOpenNow(place, () => mockClock(23));
-    expect(result).toBe(false);
+    expect(isOpenNow(basePlace, () => mockClock(23))).toBe(false);
   });
 
   it('returns null when hours are missing (unknown state)', () => {
-    const place: Place = {
-      id: 'cafe-1',
-      name: 'Test Cafe',
-      address: 'Test Address',
-      latitude: 10.8,
-      longitude: 106.7,
-      district: 'District 1',
-      openHour: null,
-      closeHour: 22,
-      rating: 4.5,
-      tags: [],
-      priceLevel: 2,
-      amenities: [],
-    };
-    const result = isOpenNow(place, () => mockClock(10));
-    expect(result).toBeNull();
+    const place: Place = { ...basePlace, openHour: null };
+    expect(isOpenNow(place, () => mockClock(10))).toBeNull();
   });
 });
 
 describe('evaluateConstraints', () => {
-  const basePlace: Place = {
-    id: 'cafe-1',
-    name: 'Test Cafe',
-    address: 'Test Address',
-    latitude: 10.8,
-    longitude: 106.7,
-    district: 'District 1',
-    openHour: 7,
-    closeHour: 22,
-    rating: 4.5,
-    tags: [],
-    priceLevel: 2,
-    amenities: ['wifi', 'parking'],
-  };
-
-  it('returns met constraint for matching district', () => {
-    const intent: SearchIntent = {
-      query: 'test',
-      districts: [{ name: 'District 1', strength: 'required' }],
-    };
-    const { constraints } = evaluateConstraints(intent, basePlace);
-    const locationConstraint = constraints.find(c => c.name === 'location');
-    expect(locationConstraint?.status).toBe('met');
-  });
-
-  it('returns not_met constraint for non-matching district', () => {
-    const intent: SearchIntent = {
+  it('excludes required location not_met, keeps preferred without flag', () => {
+    const required: SearchIntent = {
       query: 'test',
       districts: [{ name: 'District 3', strength: 'required' }],
     };
-    const { constraints } = evaluateConstraints(intent, basePlace);
-    const locationConstraint = constraints.find(c => c.name === 'location');
-    expect(locationConstraint?.status).toBe('not_met');
+    const req = evaluateConstraints(required, basePlace);
+    expect(req.constraints.find((c) => c.name === 'location')?.status).toBe('not_met');
+    expect(req.excluded).toBe(true);
+    expect(req.hasUnmetRequired).toBe(true);
+
+    const preferred: SearchIntent = {
+      query: 'test',
+      districts: [{ name: 'District 3', strength: 'preferred' }],
+    };
+    const pref = evaluateConstraints(preferred, basePlace);
+    expect(pref.excluded).toBe(false);
+    expect(pref.hasUnmetRequired).toBe(false);
   });
 
-  it('returns met for budget in range', () => {
-    const intent: SearchIntent = {
-      query: 'test',
-      priceRange: { min: 1, max: 3, strength: 'preferred' },
-    };
-    const { constraints } = evaluateConstraints(intent, basePlace);
-    const budgetConstraint = constraints.find(c => c.name === 'budget');
-    expect(budgetConstraint?.status).toBe('met');
+  it('compares budget in VND: met within, not_met above, excluded when required', () => {
+    const met = evaluateConstraints(
+      { query: 'test', budget: { maxVnd: 70000, strength: 'preferred' } },
+      basePlace,
+    );
+    expect(met.constraints.find((c) => c.name === 'budget')?.status).toBe('met');
+    expect(met.excluded).toBe(false);
+
+    const over = evaluateConstraints(
+      { query: 'test', budget: { maxVnd: 50000, strength: 'required' } },
+      basePlace,
+    );
+    expect(over.constraints.find((c) => c.name === 'budget')?.status).toBe('not_met');
+    expect(over.excluded).toBe(true);
   });
 
-  it('returns unknown for missing price level', () => {
-    const place: Place = { ...basePlace, priceLevel: null };
+  it('returns unknown for budget when only priceLevel exists, keeps place with flag', () => {
+    const place: Place = { ...basePlace, minPriceVnd: null };
     const intent: SearchIntent = {
       query: 'test',
-      priceRange: { min: 1, max: 3, strength: 'required' },
+      budget: { maxVnd: 70000, strength: 'required' },
     };
-    const { constraints, hasUnmetRequired } = evaluateConstraints(intent, place);
-    const budgetConstraint = constraints.find(c => c.name === 'budget');
-    expect(budgetConstraint?.status).toBe('unknown');
+    const { constraints, hasUnmetRequired, excluded } = evaluateConstraints(intent, place);
+    expect(constraints.find((c) => c.name === 'budget')?.status).toBe('unknown');
     expect(hasUnmetRequired).toBe(true);
+    expect(excluded).toBe(false);
   });
 
-  it('marks hasUnmetRequired=true for required constraint with unknown status', () => {
-    const place: Place = { ...basePlace, priceLevel: null };
+  it('returns unknown (never not_met) for missing amenity tag, keeps place with flag', () => {
     const intent: SearchIntent = {
       query: 'test',
-      priceRange: { min: 1, max: 3, strength: 'required' },
+      amenities: [{ name: 'quiet', strength: 'required' }],
     };
-    const { hasUnmetRequired } = evaluateConstraints(intent, place);
+    const { constraints, hasUnmetRequired, excluded } = evaluateConstraints(intent, basePlace);
+    expect(constraints.find((c) => c.name === 'amenities')?.status).toBe('unknown');
     expect(hasUnmetRequired).toBe(true);
+    expect(excluded).toBe(false);
   });
 
-  it('does not mark hasUnmetRequired for preferred constraint with unknown status', () => {
-    const place: Place = { ...basePlace, priceLevel: null };
+  it('returns unknown for openNow (not wired yet) and flags required', () => {
     const intent: SearchIntent = {
       query: 'test',
-      priceRange: { min: 1, max: 3, strength: 'preferred' },
+      openNow: { value: true, strength: 'required' },
     };
-    const { hasUnmetRequired } = evaluateConstraints(intent, place);
-    expect(hasUnmetRequired).toBe(false);
+    const { constraints, hasUnmetRequired, excluded } = evaluateConstraints(intent, basePlace);
+    expect(constraints.find((c) => c.name === 'openNow')?.status).toBe('unknown');
+    expect(hasUnmetRequired).toBe(true);
+    expect(excluded).toBe(false);
   });
 });
