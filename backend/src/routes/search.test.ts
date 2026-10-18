@@ -77,4 +77,28 @@ describe('POST /api/v1/search', () => {
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
   });
+
+  it('response includes constraintDetails array without breaking existing contract fields', async () => {
+    const res = await request(app)
+      .post('/api/v1/search')
+      .send({
+        intent: {
+          query: 'cafe',
+          districts: [{ name: 'District 1', strength: 'required' }],
+          budget: { maxVnd: 70000, strength: 'preferred' },
+        },
+      });
+    expect(res.status).toBe(200);
+    const result = res.body.data.results[0];
+    // Existing contract fields must still be present
+    expect(result).toHaveProperty('constraints');
+    expect(result).toHaveProperty('hasUnmetRequired');
+    expect(result).toHaveProperty('source', 'mock');
+    // New optional field
+    expect(Array.isArray(result.constraintDetails)).toBe(true);
+    const budgetDetail = result.constraintDetails.find(
+      (d: { name: string }) => d.name === 'budget',
+    );
+    expect(budgetDetail).toMatchObject({ name: 'budget', status: 'met' });
+  });
 });

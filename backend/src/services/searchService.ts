@@ -5,6 +5,7 @@ import { evaluateConstraints } from '../domain/utils.js';
 
 export interface SearchServiceDeps {
   placeProvider: PlaceProvider;
+  clock: () => Date;
 }
 
 export class SearchService {
@@ -24,20 +25,27 @@ export class SearchService {
       };
     }
 
+    const now = this.deps.clock();
     const places = await this.deps.placeProvider.getPlaces();
     const results = [];
     for (const place of places) {
-      const { constraints, hasUnmetRequired, excluded } = evaluateConstraints(intent, place);
+      const { constraints, constraintDetails, hasUnmetRequired, excluded } = evaluateConstraints(
+        intent,
+        place,
+        now,
+      );
       if (excluded) continue;
       results.push({
         id: place.id,
         name: place.name,
         district: place.district,
         address: place.address,
-        priceLevel: place.priceLevel,
+        // Serialize Attribute<number> → number|null to preserve the existing /search contract
+        priceLevel: place.priceLevel.type === 'known' ? place.priceLevel.value : null,
         source: this.deps.placeProvider.source,
         constraints,
         hasUnmetRequired,
+        constraintDetails,
       });
     }
 
@@ -45,6 +53,13 @@ export class SearchService {
   }
 }
 
-export function createSearchService(placeProvider: PlaceProvider): SearchService {
-  return new SearchService({ placeProvider });
+/**
+ * @param placeProvider - data source
+ * @param clock - injectable clock; defaults to system clock (() => new Date())
+ */
+export function createSearchService(
+  placeProvider: PlaceProvider,
+  clock: () => Date = () => new Date(),
+): SearchService {
+  return new SearchService({ placeProvider, clock });
 }

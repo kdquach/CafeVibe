@@ -1,47 +1,14 @@
-// Đồng bộ với backend/src/domain/schemas.ts (SearchIntentSchema).
-// Nếu backend đổi schema, cập nhật file này theo.
-export type ConstraintStrength = 'required' | 'preferred';
-
-export interface DistrictIntent {
-  name: string;
-  strength: ConstraintStrength;
-}
-
-export interface BudgetIntent {
-  maxVnd: number;
-  strength: ConstraintStrength;
-}
-
-export interface PriceRangeIntent {
-  min: number;
-  max: number;
-  strength: ConstraintStrength;
-}
-
-export interface AmenityIntent {
-  name: string;
-  strength: ConstraintStrength;
-}
-
-export interface OpenNowIntent {
-  value: boolean;
-  strength: ConstraintStrength;
-}
-
-export interface MinRatingIntent {
-  value: number;
-  strength: ConstraintStrength;
-}
-
-export interface SearchIntent {
-  query: string;
-  districts?: DistrictIntent[];
-  priceRange?: PriceRangeIntent;
-  budget?: BudgetIntent;
-  amenities?: AmenityIntent[];
-  openNow?: OpenNowIntent;
-  minRating?: MinRatingIntent;
-}
+// Nguồn sự thật: ./schemas.ts. File này re-export kiểu để code cũ dùng tiếp.
+export type {
+  AmenityIntent,
+  BudgetIntent,
+  ConstraintStrength,
+  DistrictIntent,
+  MinRatingIntent,
+  OpenNowIntent,
+  PriceRangeIntent,
+  SearchIntent,
+} from './schemas';
 
 export type IntentStatus = 'loading' | 'error' | 'ready' | 'empty';
 

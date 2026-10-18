@@ -4,6 +4,7 @@ import { PlaceProviderError } from '../domain/errors.js';
 import { MockPlaceProvider, type PlaceProvider } from '../domain/providers.js';
 import { TEST_CAFES_UNKNOWN_PRICE } from '../domain/fixtures.js';
 import type { Place, SearchIntent } from '../domain/schemas.js';
+import { known, unknown } from '../domain/schemas.js';
 
 const cafeA: Place = {
   id: 'cafe-1',
@@ -12,13 +13,13 @@ const cafeA: Place = {
   latitude: 10.8,
   longitude: 106.7,
   district: 'District 1',
-  openHour: 7,
-  closeHour: 22,
+  openHour: known(7, 'mock'),
+  closeHour: known(22, 'mock'),
   rating: 4.5,
   tags: [],
-  priceLevel: 2,
-  minPriceVnd: 60000,
-  amenities: ['wifi'],
+  priceLevel: known(2, 'mock'),
+  minPriceVnd: known(60000, 'mock'),
+  amenities: known(['wifi'], 'mock'),
 };
 
 const cafeB: Place = {
@@ -28,14 +29,17 @@ const cafeB: Place = {
   latitude: 10.8,
   longitude: 106.7,
   district: 'District 3',
-  openHour: 8,
-  closeHour: 21,
+  openHour: known(8, 'mock'),
+  closeHour: known(21, 'mock'),
   rating: 4.0,
   tags: [],
-  priceLevel: 1,
-  minPriceVnd: 35000,
-  amenities: ['parking'],
+  priceLevel: known(1, 'mock'),
+  minPriceVnd: known(35000, 'mock'),
+  amenities: known(['parking'], 'mock'),
 };
+
+// UTC 03:00 = VN 10:00 — both cafes are open during their hours
+const frozenClock = () => new Date('2026-10-17T03:00:00Z');
 
 describe('SearchService', () => {
   let mockProvider: PlaceProvider;
@@ -43,7 +47,7 @@ describe('SearchService', () => {
 
   beforeEach(() => {
     mockProvider = { source: 'mock', getPlaces: async () => [cafeA, cafeB] };
-    service = createSearchService(mockProvider);
+    service = createSearchService(mockProvider, frozenClock);
   });
 
   it('excludes required not_met places and keeps fixture order', async () => {
@@ -69,7 +73,7 @@ describe('SearchService', () => {
 
   it('keeps required+unknown places with flag (injected test fixtures)', async () => {
     const injected = new MockPlaceProvider(TEST_CAFES_UNKNOWN_PRICE);
-    const injectedService = createSearchService(injected);
+    const injectedService = createSearchService(injected, frozenClock);
     const response = await injectedService.search({
       query: 'cafe',
       budget: { maxVnd: 50000, strength: 'required' },
@@ -97,8 +101,47 @@ describe('SearchService', () => {
         throw new PlaceProviderError('down');
       },
     };
-    await expect(createSearchService(failing).search({ query: 'cafe' })).rejects.toThrow(
+    await expect(createSearchService(failing, frozenClock).search({ query: 'cafe' })).rejects.toThrow(
       PlaceProviderError,
     );
+  });
+
+  it('serializes priceLevel from Attribute<number> to number|null in response', async () => {
+    const withUnknownPrice: Place = {
+      ...cafeA,
+      id: 'cafe-no-price',
+      priceLevel: unknown(),
+    };
+    const provider: PlaceProvider = {
+      source: 'mock',
+      getPlaces: async () => [cafeA, withUnknownPrice],
+    };
+    const response = await createSearchService(provider, frozenClock).search({ query: 'cafe' });
+    expect(response.results.find((r) => r.id === 'cafe-1')?.priceLevel).toBe(2);
+    expect(response.results.find((r) => r.id === 'cafe-no-price')?.priceLevel).toBeNull();
+  });
+
+  it('includes constraintDetails in response when constraints are evaluated', async () => {
+    const intent: SearchIntent = {
+      query: 'cafe',
+      budget: { maxVnd: 70000, strength: 'preferred' },
+    };
+    const response = await service.search(intent);
+    const result = response.results[0];
+    expect(result).toBeDefined();
+    expect(Array.isArray(result!.constraintDetails)).toBe(true);
+    const budgetDetail = result!.constraintDetails?.find((d) => d.name === 'budget');
+    expect(budgetDetail?.status).toBe('met');
+    expect(budgetDetail?.evidence?.source).toBe('mock');
+  });
+
+  it('clock injection: openNow resolved against frozen time (VN 10:00, open 7–22 → met)', async () => {
+    const intent: SearchIntent = {
+      query: 'cafe',
+      openNow: { value: true, strength: 'preferred' },
+    };
+    const response = await service.search(intent);
+    const cafeAResult = response.results.find((r) => r.id === 'cafe-1');
+    expect(cafeAResult?.constraints.find((c) => c.name === 'openNow')?.status).toBe('met');
   });
 });

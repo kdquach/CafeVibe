@@ -17,6 +17,28 @@ function renderApp(path: string) {
   );
 }
 
+const DEFAULT_TEST_INTENT = {
+  query: 'quán yên tĩnh',
+  districts: [{ name: 'Gò Vấp', strength: 'required' as const }],
+  amenities: [{ name: 'quiet', strength: 'preferred' as const }],
+};
+
+function stubIntentOk(intent: unknown = DEFAULT_TEST_INTENT) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) =>
+      String(input).endsWith('/search/intent')
+        ? Promise.resolve(
+            new Response(JSON.stringify({ data: intent }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          )
+        : Promise.reject(new Error(`unexpected fetch: ${String(input)}`)),
+    ),
+  );
+}
+
 function stubHealthOk() {
   vi.stubGlobal(
     'fetch',
@@ -59,12 +81,15 @@ describe('landing page', () => {
     expect(screen.queryByText('Tìm kiếm chưa khả dụng')).not.toBeInTheDocument();
   });
 
-  it('submitting navigates to /search and echoes the query (keyboard only)', async () => {
+  it('submitting navigates to /search and shows the intent panel (keyboard only)', async () => {
+    stubIntentOk({
+      query: 'quán yên tĩnh',
+      districts: [{ name: 'Gò Vấp', strength: 'required' }],
+    });
     renderApp('/');
     await userEvent.type(screen.getByRole('searchbox'), 'quán yên tĩnh{Enter}');
     expect(await screen.findByRole('heading', { level: 1, name: 'Tìm kiếm' })).toBeInTheDocument();
-    expect(screen.getByText('quán yên tĩnh')).toBeInTheDocument();
-    expect(screen.getByText('Tìm kiếm chưa khả dụng')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Xác nhận và tìm kiếm' })).toBeInTheDocument();
   });
 
   it('sets a document title', () => {
@@ -82,17 +107,25 @@ describe('search page (placeholder)', () => {
     expect(document.title).toBe('Tìm kiếm · CafeVibe');
   });
 
-  it('echoes the query and never shows results', () => {
+  it('loads the intent and never fabricates results', async () => {
+    stubIntentOk({
+      query: 'có wifi',
+      amenities: [{ name: 'wifi', strength: 'required' }],
+    });
     renderApp('/search?q=c%C3%B3%20wifi');
-    expect(screen.getByText('có wifi')).toBeInTheDocument();
-    expect(screen.getByText(/chưa có quán nào được hiển thị/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Xác nhận và tìm kiếm' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toHaveValue('có wifi');
+    expect(screen.queryByText('Dữ liệu mẫu')).not.toBeInTheDocument();
   });
 
-  it('renders markup in the query as plain text (no injection)', () => {
+  it('renders markup in the query as plain text (no injection)', async () => {
     const payload = '<img src=x onerror=alert(1)>';
+    stubIntentOk({
+      query: payload,
+      amenities: [{ name: 'quiet', strength: 'preferred' }],
+    });
     const { container } = renderApp(`/search?q=${encodeURIComponent(payload)}`);
-    expect(screen.getByText(payload)).toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Xác nhận và tìm kiếm' });
     expect(container.querySelector('img')).toBeNull();
   });
 

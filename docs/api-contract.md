@@ -151,12 +151,19 @@ The `intent` object matches `SearchIntentSchema`. A legacy body with only `{ "qu
 **Response Fields:**
 - `results`: Array of matched cafes in provider order (no ranking or sorting in this phase)
 - `results[].source`: Data source — `mock` for fixture data, `provider` for a real provider
+- `results[].priceLevel`: `number | null` — extracted from the place's `Attribute<number>`; `null` when the price tier is unknown
 - `results[].constraints`: Array of evaluated search constraints, each with:
-  - `name`: Constraint identifier (location, budget, amenities, openNow, rating)
-  - `status`: Evaluation result—`met` (satisfied), `not_met` (failed), or `unknown` (insufficient data)
-- `results[].hasUnmetRequired`: Boolean flag—true if any required constraint has status `not_met` or `unknown`
+  - `name`: Constraint identifier (`location`, `budget`, `amenities`, `openNow`, `rating`)
+  - `status`: Evaluation result — `met` (satisfied), `not_met` (failed), or `unknown` (insufficient data)
+- `results[].hasUnmetRequired`: Boolean flag — `true` if any required constraint has status `not_met` or `unknown`
+- `results[].constraintDetails` *(optional, Phase 5a+)*: Per-item constraint details for grounded explanations. Each entry:
+  - `name`: Fine-grained name — e.g. `'budget'`, `'openNow'`, `'district:District 1'`, `'amenity:quiet'`
+  - `status`: Same enum as `constraints[].status`
+  - `evidence` *(optional)*: `{ value: unknown, source: 'provider' | 'user_submitted' | 'inferred' | 'mock' }` — the underlying attribute value and its provenance. Present only for `Attribute<T>`-backed fields. For fixture data, `source` is `'mock'`.
 - `results`: A place is excluded when a required constraint evaluates to `not_met`; required + `unknown` keeps the place with the flag set. Preferred constraints never exclude.
 - `warnings`: Array of `{ code, message }` objects. Unsupported districts return 200 with empty `results` and a `LOCATION_NOT_SUPPORTED` warning. Budget is compared in VND only (`minPriceVnd <= budget.maxVnd`); a place with only `priceLevel` evaluates to `unknown`, never mapped from price level. A missing amenity tag evaluates to `unknown`, never `not_met` (absence of a tag is not evidence of absence).
+
+**`AttributeSource` values:** `provider` | `user_submitted` | `inferred` are defined by ADR-002. `mock` is an extension used only in fixture data to record provenance clearly; it is never returned by a real provider.
 
 **Status Codes:**
 
